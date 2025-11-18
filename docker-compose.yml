@@ -1,7 +1,6 @@
 version: '3.8'
 
 services:
-  # --- Serviço de Clientes ---
   cliente-db:
     image: postgres:15-alpine
     container_name: cliente-db
@@ -15,7 +14,6 @@ services:
     ports:
       - '5433:5432'
 
-  # --- Serviço de Produtos ---
   produto-db:
     image: postgres:15-alpine
     container_name: produto-db
@@ -42,7 +40,6 @@ services:
     ports:
       - '5435:5432'
 
-  # --- Banco de dados de Pedidos (MongoDB) ---
   orders-db:
     image: mongo:6.0
     container_name: orders-db
@@ -59,7 +56,6 @@ services:
       retries: 10
       start_period: 10s
 
-  # --- UI para MongoDB ---
   mongo-express:
     image: mongo-express
     container_name: mongo-express
@@ -75,7 +71,6 @@ services:
     depends_on:
       - orders-db
 
-  # --- Inicialização do Replica Set ---
   orders-db-init:
     image: mongo:6.0
     depends_on:
@@ -103,6 +98,9 @@ services:
       DATABASE_URL: "postgresql://user:password@cliente-db:5432/clientedb"
     depends_on:
       - cliente-db
+    security_opt:
+      - seccomp:unconfined
+      - label:disable
     command: sh -c "npx prisma migrate deploy && npm start"
 
   produto-service:
@@ -115,6 +113,9 @@ services:
       DATABASE_URL: "postgresql://user:password@produto-db:5432/produtodb"
     depends_on:
       - produto-db
+    security_opt:
+      - seccomp:unconfined
+      - label:disable
     command: sh -c "npx prisma migrate deploy && npm start"
 
   pagamentos-service:
@@ -125,8 +126,13 @@ services:
       - '3004:3004'
     environment:
       DATABASE_URL: "postgresql://user:password@pagamento-db:5432/pagamentodb"
+      RABBITMQ_URL: "amqp://admin:admin@rabbitmq:5672"
     depends_on:
       - pagamento-db
+      - rabbitmq
+    security_opt:
+      - seccomp:unconfined
+      - label:disable
     command: sh -c "npx prisma migrate deploy && npx prisma db seed && npm start"
 
   notificacoes-service:
@@ -135,6 +141,10 @@ services:
     restart: always
     ports:
       - '3005:3005'
+    environment:
+      RABBITMQ_URL: "amqp://admin:admin@rabbitmq:5672"
+    depends_on:
+      - rabbitmq
 
   pedidos-service:
     container_name: pedidos-service
@@ -146,6 +156,9 @@ services:
       - ./.env
     depends_on:
       - orders-db-init
+    security_opt:
+      - seccomp:unconfined
+      - label:disable
     command: sh -c "npx prisma db push && npm start"
 
   pgadmin:
@@ -163,6 +176,16 @@ services:
       - produto-db
       - cliente-db
       - pagamento-db
+
+  rabbitmq:
+    image: rabbitmq:3.9-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=admin
+      - RABBITMQ_DEFAULT_PASS=admin
 
 volumes:
   cliente-data:
