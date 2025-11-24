@@ -28,7 +28,7 @@ const paymentService = {
     async createPayment(data) {
         console.log('DADOS RECEBIDOS NA CREATE PAYMENT:', data);
 
-        const { orderId, value, typePaymentId } = data;
+        const { orderId, userId, value, typePaymentId, productSnapshots } = data;
         if (!orderId || !value || !typePaymentId) {
             throw new Error('orderId, value e typePaymentId são obrigatórios.');
         }
@@ -41,8 +41,10 @@ const paymentService = {
         return prisma.orderPayment.create({
             data: {
                 orderId,
+                userId: userId || 'N/A',
                 value,
                 typePaymentId,
+                productSnapshots: productSnapshots || [],
                 status: 'PENDENTE',
             },
         });
