@@ -1,30 +1,57 @@
-# arq_si_ms
+# Arquitetura de Microsserviços
 
-## Executar MongoDB local com Replica Set
+## Como rodar
 
-O serviço de pedidos usa Prisma com MongoDB, então o banco precisa rodar em **replica set** (mesmo em ambiente local). O `docker-compose.yml` já inclui os containers necessários (`orders-db` e `orders-db-init`). Para iniciar:
-
-1. Suba o banco:
+Subir os serviços:
    ```bash
-   docker compose up -d orders-db
-   ```
-2. Execute o init uma vez (ele espera o Mongo ficar pronto, cria o replica set e encerra):
-   ```bash
-   docker compose up orders-db-init
-   ```
-3. Depois que o init terminar, suba os demais serviços normalmente:
-   ```bash
-   docker compose up -d cliente-service produto-service pagamentos-service pedidos-service notificacoes-service mongo-express
+   docker-compose up -d
    ```
 
-> Se precisar reiniciar tudo do zero, use `docker compose down mongo-express pedidos-service orders-db-init orders-db` e, opcionalmente, `docker volume rm arq_si_ms_orders_mongo_data` para limpar os dados antes de repetir os passos.
+## Testar API
 
-Com isso, o Prisma passa a criar pedidos usando o container Mongo local e o endpoint `POST /api/orders` retorna o `id` necessário para o fluxo de pagamentos.
+Existem dois arquivos para testar a API:
 
-## Serviço de Notificações
+### 1. Testes Manuais (`curls.sh`)
+Script que roda automaticamente todos os testes com formatação JSON usando `jq`.
+- Dar permissão de execução: `chmod +x auto_curls.sh`
 
-- Local: `./notificacoes`
-- Endpoint principal: `POST /api/notifications/order-paid`
-- Responsabilidade: receber eventos de pagamento aprovado e registrar/logar a notificação do cliente. O serviço consulta o `cliente-service` (quando o `userId` é informado) para personalizar a mensagem.
+**Pré-requisitos:**
+- Instalar `jq`: `sudo apt install jq` (Ubuntu) | `brew install jq` (macOS) | `sudo dnf install jq` (Debian) 
+- Dar permissão de execução: `chmod +x auto_curls.sh`
 
-O serviço de pagamentos dispara automaticamente a notificação após atualizar o pedido para `PAGO`.
+**Executar:**
+```bash
+./curls.sh
+```
+
+## API Gateway (Kong)
+
+O Kong está configurado como API Gateway na porta `8000`. O Konga é a interface de administração do Kong, acessível em `http://localhost:1337`.
+- Os serviços, rotas e plugins já são configurados ao subir o *docker*
+
+### Exemplo: Configurar Serviço e Rota para Usuários
+
+1. **Criar Serviço:**
+```bash
+curl -i -X POST http://localhost:8001/services \
+  --data name=user-service \
+  --data url='http://cliente-service:3001'
+```
+
+2. **Criar Rota:**
+```bash
+curl -i -X POST http://localhost:8001/services/user-service/routes \
+  --data 'paths[]=/users' \
+  --data name=user-route
+```
+
+3. **Testar via Kong:**
+```bash
+curl http://localhost:8000/users
+```
+
+## Limpar tudo
+
+```bash
+docker-compose down -v
+```
