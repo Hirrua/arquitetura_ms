@@ -12,12 +12,7 @@ Subir os serviços:
 Existem dois arquivos para testar a API:
 
 ### 1. Testes Manuais (`curls.sh`)
-Script que roda automaticamente todos os testes com formatação JSON usando `jq`.
-- Dar permissão de execução: `chmod +x auto_curls.sh`
-
-**Pré-requisitos:**
-- Instalar `jq`: `sudo apt install jq` (Ubuntu) | `brew install jq` (macOS) | `sudo dnf install jq` (Debian) 
-- Dar permissão de execução: `chmod +x auto_curls.sh`
+Rodar um curl por vez, alterando os *ID*.
 
 **Executar:**
 ```bash
